@@ -10,13 +10,13 @@
         android:id="@+id/btnONOFF"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="438dp"
-        android:layout_marginEnd="280dp"
-        android:layout_marginStart="16dp"
-        android:layout_marginTop="25dp"
+
+        android:layout_marginEnd="51dp"
+        android:layout_marginStart="56dp"
+        android:layout_marginTop="64dp"
         android:text="ON/OFF"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintEnd_toStartOf="@+id/btnEnDis"
+        app:layout_constraintHorizontal_chainStyle="spread_inside"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
@@ -24,12 +24,43 @@
         android:id="@+id/btnEnDis"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="438dp"
-        android:layout_marginTop="25dp"
+        android:layout_marginBottom="65dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginStart="51dp"
+        android:layout_marginTop="64dp"
         android:onClick="btnEnableDisable_Discoverable"
         android:text="Enable Discoverablilty"
-        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintBottom_toTopOf="@+id/btnFindUnpairedDevices"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toEndOf="@+id/btnONOFF"
         app:layout_constraintTop_toTopOf="parent" />
+
+    <Button
+        android:id="@+id/btnFindUnpairedDevices"
+        android:layout_width="337dp"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"
+        android:layout_marginEnd="37dp"
+        android:layout_marginStart="37dp"
+        android:layout_marginTop="13dp"
+        android:onClick="btnDiscover"
+        android:text="Discover"
+        app:layout_constraintBottom_toTopOf="@+id/lvNewDevices"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/btnONOFF" />
+
+    <ListView
+        android:id="@+id/lvNewDevices"
+        android:layout_width="match_parent"
+        android:layout_height="150dp"
+        android:layout_below="@id/btnFindUnpairedDevices"
+        android:layout_marginBottom="160dp"
+        android:layout_marginEnd="37dp"
+        android:layout_marginStart="37dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.013"
+        app:layout_constraintStart_toStartOf="parent" />
+
 </android.support.constraint.ConstraintLayout>

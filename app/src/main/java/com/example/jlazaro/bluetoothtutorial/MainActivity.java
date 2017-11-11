@@ -1,22 +1,33 @@
 package com.example.jlazaro.bluetoothtutorial;
 
+import android.Manifest;
+import android.annotation.SuppressLint;
 import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.os.Build;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.widget.AdapterView;
 import android.widget.Button;
+import android.widget.ListView;
 
-public class MainActivity extends AppCompatActivity {
+import java.util.ArrayList;
+
+public class MainActivity extends AppCompatActivity implements AdapterView.OnItemClickListener{
 
     private static final String TAG = "MainActivity";
 
     BluetoothAdapter mBluetoothAdapter;
     Button btnEnableDisable_Discoverable;
+    ArrayList<BluetoothDevice> mBTDevices = new ArrayList<BluetoothDevice>();
+    DeviceListAdapter mDeviceListAdapter;
+    ListView lvNewDevices;
 
     private final BroadcastReceiver mBroadcastReciever1 = new BroadcastReceiver() {
         public void onReceive(Context context, Intent intent) {
@@ -53,7 +64,7 @@ public class MainActivity extends AppCompatActivity {
                         Log.d(TAG, "onReceive: Discoverability Enabled");
                         break;
                     case BluetoothAdapter.SCAN_MODE_CONNECTABLE:
-                        Log.d(TAG, "onReceive: Discoverablilty Endabled. Able to reciever connections");
+                        Log.d(TAG, "onReceive: Discoverabililty Disabled. Able to reciever connections");
                         break;
                     case BluetoothAdapter.SCAN_MODE_NONE:
                         Log.d(TAG, "onReceive: Discoverability Disabled. Unable to recieve connections");
@@ -69,11 +80,53 @@ public class MainActivity extends AppCompatActivity {
         }
     };
 
+    //Broadcast Reciever for listing devices that arent paired
+    private BroadcastReceiver mBroadcastReciever3 = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            final String action = intent.getAction();
+            Log.d(TAG, "onReceive: ACTION FOUND");
+            if(action.equals(BluetoothDevice.ACTION_FOUND)){
+                BluetoothDevice device = intent.getParcelableExtra((BluetoothDevice.EXTRA_DEVICE));
+                mBTDevices.add(device);
+                Log.d(TAG, "onReceive: " + device.getName() + ": " + device.getAddress());
+                mDeviceListAdapter = new DeviceListAdapter(context, R.layout.device_adapter_view, mBTDevices);
+                lvNewDevices.setAdapter(mDeviceListAdapter);
+            }
+        }
+    };
+    private final BroadcastReceiver mBroadcastReciever4 = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            final String action = intent.getAction();
+
+            if(action.equals(BluetoothDevice.ACTION_BOND_STATE_CHANGED)){
+                BluetoothDevice mDevice = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+                //3 cases
+                //case 1: already bonded
+                if(mDevice.getBondState() == BluetoothDevice.BOND_BONDED){
+                    Log.d(TAG, "onReceive: BOND_BONDED");
+                }
+                //case 2: creating bond
+                if(mDevice.getBondState() == BluetoothDevice.BOND_BONDING){
+                    Log.d(TAG, "onReceive: BOND_BONDING");
+                }
+                //case 3: bond broken
+                if(mDevice.getBondState() == BluetoothDevice.BOND_NONE){
+                    Log.d(TAG, "onReceive: BOND_NONE");
+                }
+            }
+        }
+    };
+
     @Override
     protected void onDestroy() {
         Log.d(TAG, "onDestroy: called");
         super.onDestroy();
         unregisterReceiver(mBroadcastReciever1);
+        unregisterReceiver(mBroadcastReciever2);
+        unregisterReceiver(mBroadcastReciever3);
+        unregisterReceiver(mBroadcastReciever4);
     }
 
     @Override
@@ -83,8 +136,16 @@ public class MainActivity extends AppCompatActivity {
 
         Button btnONOFF = (Button) findViewById(R.id.btnONOFF);
         btnEnableDisable_Discoverable = (Button) findViewById(R.id.btnEnDis);
+        lvNewDevices = (ListView) findViewById(R.id.lvNewDevices);
+        mBTDevices = new ArrayList<>();
+
+        //Broadcasts when bond state changes (pairing)
+        IntentFilter filter = new IntentFilter(BluetoothDevice.ACTION_BOND_STATE_CHANGED);
+        registerReceiver(mBroadcastReciever4, filter);
 
         mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+
+        lvNewDevices.setOnItemClickListener(MainActivity.this);
 
         btnONOFF.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -125,5 +186,61 @@ public class MainActivity extends AppCompatActivity {
 
         IntentFilter intnentFilter = new IntentFilter((mBluetoothAdapter.ACTION_SCAN_MODE_CHANGED));
         registerReceiver(mBroadcastReciever2, intnentFilter);
+    }
+
+    public void btnDiscover(View view) {
+        Log.d(TAG, "btnDiscover: Looking for Unpaired Devices");
+
+        if(mBluetoothAdapter.isDiscovering()){
+            mBluetoothAdapter.cancelDiscovery();
+            Log.d(TAG, "btnDiscover: Canceling descovery");
+
+            checkBTPermissions();
+
+            mBluetoothAdapter.startDiscovery();
+            IntentFilter discoverDevicesIntent = new IntentFilter(BluetoothDevice.ACTION_FOUND);
+            registerReceiver(mBroadcastReciever3, discoverDevicesIntent);
+        }
+        else if(!mBluetoothAdapter.isDiscovering()){
+            checkBTPermissions();
+
+            mBluetoothAdapter.startDiscovery();
+
+            IntentFilter discoverDevicesIntent = new IntentFilter(BluetoothDevice.ACTION_FOUND);
+            registerReceiver(mBroadcastReciever3, discoverDevicesIntent);
+        }
+    }
+
+    //method only because lollipop and later versions reqire permissions to use bluetooth
+    @SuppressLint("NewApi")
+    public void checkBTPermissions(){
+        if(Build.VERSION.SDK_INT > Build.VERSION_CODES. LOLLIPOP){
+             int permissionsCheck = this.checkSelfPermission("Manifest.permission.ACCESS_FINE_LOCATION");
+            permissionsCheck += this.checkSelfPermission("Manifest.permission.ACCESS_COARSE_LOCATION");
+            if(permissionsCheck != 0) {
+                this.requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION}, 1001);
+            }
+            else{
+                Log.d(TAG, "checkBTPermissions: No need to check permissions. SDK < LOLLIPOP");
+            }
+        }
+    }
+
+    @Override
+    public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
+        mBluetoothAdapter.cancelDiscovery();
+        Log.d(TAG, "onItemClick: You clicked a device");
+        String deviceName = mBTDevices.get(i).getName();
+        String deviceAddress = mBTDevices.get(i).getAddress();
+
+        Log.d(TAG, "onItemClick: deviceName: " + deviceName);
+        Log.d(TAG, "onItemClick: deviceAddress: " + deviceAddress);
+
+        //create bond
+        //NOTE: Requires API 17+?
+        if(Build.VERSION.SDK_INT > Build.VERSION_CODES.JELLY_BEAN_MR2){
+            Log.d(TAG, "onItemClick: Trying to pair with " + deviceName);
+            mBTDevices.get(i).createBond();
+        }
     }
 }
